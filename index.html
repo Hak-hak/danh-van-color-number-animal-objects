@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color & Number Spelling Quest</title>
+    <style>
+        body {
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #6ab0ff, #a1e3cb);
+            text-align: center;
+            color: #2d3436;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.97);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 80vh;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #0984e3;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        #word-meaning {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #d63031;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        #word-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            min-height: 50px;
+            background-color: #f1f9ff;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        #letters-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: auto;
+            background-color: #e6f3ec;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .letter {
+            padding: 12px 18px;
+            font-size: 1.2rem;
+            background-color: #fdcb6e;
+            color: #2d3436;
+            border: 2px solid #e17055;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .letter:hover {
+            background-color: #e17055;
+            transform: scale(1.1);
+        }
+        .letter.correct {
+            background-color: #00b894;
+            border-color: #009432;
+            cursor: default;
+            transform: none;
+        }
+        .letter.flash {
+            animation: flash 0.5s 2;
+        }
+        @keyframes flash {
+            0% { background-color: #6c5ce7; border-color: #4834d4; }
+            50% { background-color: #a29bfe; border-color: #6c5ce7; }
+            100% { background-color: #6c5ce7; border-color: #4834d4; }
+        }
+        #feedback {
+            font-size: 1.2rem;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        #score, #word-count {
+            font-size: 1.1rem;
+            margin: 10px 0;
+            color: #d63031;
+        }
+        #start-btn, #reset-btn, #replay-btn {
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            margin: 10px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #e17055, #fdcb6e);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #start-btn:hover, #reset-btn:hover, #replay-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        #start-btn:disabled, #reset-btn:disabled, #replay-btn:disabled {
+            background: #b2bec3;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        #congratulations {
+            display: none;
+            font-size: 2rem;
+            color: #009432;
+            font-weight: bold;
+            position: relative;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            .letter, #start-btn, #reset-btn, #replay-btn {
+                font-size: 1rem;
+                padding: 10px 14px;
+            }
+            #word-meaning, #feedback {
+                font-size: 1rem;
+            }
+            #score, #word-count {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h1>Color & Number Spelling Quest</h1>
+            <p>Listen to the letters and click them to build the word!</p>
+            <p id="word-meaning"></p>
+            <div id="word-container"></div>
+            <p id="feedback"></p>
+            <p id="score">Score: 0</p>
+            <p id="word-count">Words Completed: 0/64</p>
+            <button id="start-btn">Start</button>
+            <button id="reset-btn">Reset Game</button>
+            <button id="replay-btn">Replay Letter</button>
+            <p id="congratulations">Congratulations! You've completed all words!</p>
+        </div>
+        <div id="letters-container"></div>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const vocabulary = [
+            { word: "red", meaning: "red" },
+            { word: "blue", meaning: "blue" },
+            { word: "yellow", meaning: "yellow" },
+            { word: "green", meaning: "green" },
+            { word: "black", meaning: "black" },
+            { word: "white", meaning: "white" },
+            { word: "pink", meaning: "pink" },
+            { word: "brown", meaning: "brown" },
+            { word: "orange", meaning: "orange" },
+            { word: "purple", meaning: "purple" },
+            { word: "grey", meaning: "grey" },
+            { word: "gray", meaning: "gray" },
+            { word: "light blue", meaning: "light blue" },
+            { word: "dark green", meaning: "dark green" },
+            { word: "one", meaning: "one" },
+            { word: "two", meaning: "two" },
+            { word: "three", meaning: "three" },
+            { word: "four", meaning: "four" },
+            { word: "five", meaning: "five" },
+            { word: "six", meaning: "six" },
+            { word: "seven", meaning: "seven" },
+            { word: "eight", meaning: "eight" },
+            { word: "nine", meaning: "nine" },
+            { word: "ten", meaning: "ten" },
+            { word: "eleven", meaning: "eleven" },
+            { word: "twelve", meaning: "twelve" },
+            { word: "thirteen", meaning: "thirteen" },
+            { word: "fourteen", meaning: "fourteen" },
+            { word: "fifteen", meaning: "fifteen" },
+            { word: "sixteen", meaning: "sixteen" },
+            { word: "seventeen", meaning: "seventeen" },
+            { word: "eighteen", meaning: "eighteen" },
+            { word: "nineteen", meaning: "nineteen" },
+            { word: "twenty", meaning: "twenty" },
+            { word: "dog", meaning: "dog" },
+            { word: "cat", meaning: "cat" },
+            { word: "bird", meaning: "bird" },
+            { word: "fish", meaning: "fish" },
+            { word: "duck", meaning: "duck" },
+            { word: "chicken", meaning: "chicken" },
+            { word: "cow", meaning: "cow" },
+            { word: "pig", meaning: "pig" },
+            { word: "horse", meaning: "horse" },
+            { word: "sheep", meaning: "sheep" },
+            { word: "lion", meaning: "lion" },
+            { word: "tiger", meaning: "tiger" },
+            { word: "elephant", meaning: "elephant" },
+            { word: "monkey", meaning: "monkey" },
+            { word: "bear", meaning: "bear" },
+            { word: "book", meaning: "book" },
+            { word: "pen", meaning: "pen" },
+            { word: "pencil", meaning: "pencil" },
+            { word: "eraser", meaning: "eraser" },
+            { word: "ruler", meaning: "ruler" },
+            { word: "bag", meaning: "bag" },
+            { word: "schoolbag", meaning: "schoolbag" },
+            { word: "notebook", meaning: "notebook" },
+            { word: "sharpener", meaning: "sharpener" },
+            { word: "board", meaning: "board" },
+            { word: "chalk", meaning: "chalk" },
+            { word: "desk", meaning: "desk" },
+            { word: "chair", meaning: "chair" },
+            { word: "crayon", meaning: "crayon" },
+            { word: "glue", meaning: "glue" },
+            { word: "scissors", meaning: "scissors" }
+        ];
+
+        let currentWord = null;
+        let currentLetterIndex = 0;
+        let score = 0;
+        let wordsCompleted = 0;
+        let usedWords = [];
+        const wordContainer = document.getElementById("word-container");
+        const lettersContainer = document.getElementById("letters-container");
+        const wordMeaning = document.getElementById("word-meaning");
+        const feedback = document.getElementById("feedback");
+        const scoreDisplay = document.getElementById("score");
+        const wordCountDisplay = document.getElementById("word-count");
+        const startBtn = document.getElementById("start-btn");
+        const resetBtn = document.getElementById("reset-btn");
+        const replayBtn = document.getElementById("replay-btn");
+        const congratulations = document.getElementById("congratulations");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Fireworks setup
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let particles = [];
+
+        function createParticle(x, y) {
+            return {
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                size: Math.random() * 5 + 2,
+                life: 100
+            };
+        }
+
+        function animateFireworks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1;
+                p.life--;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+            if (particles.length > 0) {
+                requestAnimationFrame(animateFireworks);
+            }
+        }
+
+        function showCongratulations() {
+            congratulations.style.display = "block";
+            const rect = congratulations.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            for (let i = 0; i < 100; i++) {
+                particles.push(createParticle(x, y));
+            }
+            animateFireworks();
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function getRandomWord() {
+            const availableWords = vocabulary.filter(w => !usedWords.includes(w.word));
+            if (availableWords.length === 0) return null;
+            return availableWords[Math.floor(Math.random() * availableWords.length)];
+        }
+
+        function speakLetter(letter, callback) {
+            const utterance = new SpeechSynthesisUtterance(letter);
+            utterance.lang = "en-US";
+            if (callback) {
+                utterance.onend = callback;
+            }
+            speechSynthesis.speak(utterance);
+        }
+
+        function speakWord(word, callback) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = "en-US";
+            if (callback) {
+                utterance.onend = callback;
+            }
+            speechSynthesis.speak(utterance);
+        }
+
+        function displayJumbledLetters(word) {
+            lettersContainer.innerHTML = "";
+            const letters = word.replace(" ", "").split("");
+            const jumbledLetters = shuffle([...letters]);
+            jumbledLetters.forEach(letter => {
+                const span = document.createElement("span");
+                span.classList.add("letter");
+                span.textContent = letter;
+                span.addEventListener("click", () => handleLetterClick(letter, span));
+                lettersContainer.appendChild(span);
+            });
+        }
+
+        function displayWordProgress() {
+            wordContainer.innerHTML = "";
+            const displayWord = currentWord.word.replace(" ", "");
+            for (let i = 0; i < displayWord.length; i++) {
+                const span = document.createElement("span");
+                span.classList.add("letter");
+                if (i < currentLetterIndex) {
+                    span.textContent = displayWord[i];
+                    span.classList.add("correct");
+                } else {
+                    span.textContent = "_";
+                }
+                wordContainer.appendChild(span);
+            }
+        }
+
+        function handleLetterClick(letter, span) {
+            const displayWord = currentWord.word.replace(" ", "");
+            if (letter.toLowerCase() === displayWord[currentLetterIndex]) {
+                span.classList.add("correct");
+                span.style.pointerEvents = "none";
+                feedback.textContent = "Correct!";
+                feedback.style.color = "#009432";
+                currentLetterIndex++;
+                displayWordProgress();
+                if (currentLetterIndex >= displayWord.length) {
+                    wordsCompleted++;
+                    usedWords.push(currentWord.word);
+                    wordCountDisplay.textContent = `Words Completed: ${wordsCompleted}/${vocabulary.length}`;
+                    score += 10;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    feedback.textContent = "Well done! Word completed!";
+                    spellOutWord();
+                } else {
+                    speechSynthesis.cancel();
+                    setTimeout(() => speakLetter(displayWord[currentLetterIndex]), 500);
+                }
+            } else {
+                feedback.textContent = "Wrong! Try again.";
+                feedback.style.color = "#e03131";
+                const correctLetter = displayWord[currentLetterIndex];
+                const correctSpan = Array.from(lettersContainer.children).find(
+                    s => s.textContent === correctLetter && !s.classList.contains("correct")
+                );
+                correctSpan.classList.add("flash");
+                setTimeout(() => correctSpan.classList.remove("flash"), 1000);
+            }
+        }
+
+        function spellOutWord() {
+            let index = 0;
+            const displayWord = currentWord.word.replace(" ", "");
+            const letters = Array.from(wordContainer.children);
+            function speakNextLetter() {
+                if (index < displayWord.length) {
+                    const letter = displayWord[index];
+                    const letterSpan = letters[index];
+                    letterSpan.classList.add("flash");
+                    speakLetter(letter, () => {
+                        letterSpan.classList.remove("flash");
+                        index++;
+                        speakNextLetter();
+                    });
+                } else {
+                    speakWord(currentWord.word, () => {
+                        if (usedWords.length >= vocabulary.length) {
+                            showCongratulations();
+                            lettersContainer.innerHTML = "";
+                            wordContainer.innerHTML = "";
+                            wordMeaning.textContent = "";
+                            feedback.textContent = "";
+                            startBtn.disabled = true;
+                            replayBtn.disabled = true;
+                        } else {
+                            startNewRound();
+                        }
+                    });
+                }
+            }
+            speakNextLetter();
+        }
+
+        function startNewRound() {
+            currentWord = getRandomWord();
+            if (!currentWord) {
+                showCongratulations();
+                return;
+            }
+            currentLetterIndex = 0;
+            wordMeaning.innerHTML = `Word: ${currentWord.meaning}`;
+            feedback.textContent = "";
+            displayJumbledLetters(currentWord.word);
+            displayWordProgress();
+            speakLetter(currentWord.word.replace(" ", "")[0]);
+            startBtn.disabled = true;
+            resetBtn.disabled = false;
+            replayBtn.disabled = false;
+        }
+
+        function resetGame() {
+            score = 0;
+            wordsCompleted = 0;
+            usedWords = [];
+            scoreDisplay.textContent = `Score: ${score}`;
+            wordCountDisplay.textContent = `Words Completed: ${wordsCompleted}/${vocabulary.length}`;
+            wordContainer.innerHTML = "";
+            lettersContainer.innerHTML = "";
+            wordMeaning.textContent = "";
+            feedback.textContent = "";
+            congratulations.style.display = "none";
+            particles = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            startBtn.disabled = false;
+            resetBtn.disabled = true;
+            replayBtn.disabled = true;
+            speechSynthesis.cancel();
+        }
+
+        replayBtn.addEventListener("click", () => {
+            if (currentWord && currentLetterIndex < currentWord.word.replace(" ", "").length) {
+                speechSynthesis.cancel();
+                speakLetter(currentWord.word.replace(" ", "")[currentLetterIndex]);
+            }
+        });
+
+        startBtn.addEventListener("click", startNewRound);
+        resetBtn.addEventListener("click", resetGame);
+
+        // Initial state
+        resetBtn.disabled = true;
+        replayBtn.disabled = true;
+    </script>
+</body>
+</html>
